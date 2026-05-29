@@ -298,6 +298,7 @@ fun DaySummary(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterChipsRow(
     options: List<Pair<String?, String>>,
