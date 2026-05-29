@@ -125,8 +125,7 @@ fun HomeScreen(
                     monthlyOtherSpent = monthlyOtherSpent,
                     monthlyDailySpent = monthlyDailyNetExpense,
                     currencyFormat = currencyFormat,
-                    onUpdateRatio = { other, daily -> viewModel.updateMonthlyRatio(other, daily) },
-                    onUpdateMonthlyTotal = { newTotal -> viewModel.updateMonthlyTotalBudget(newTotal) }
+                    onUpdateBudget = { total, other, daily -> viewModel.updateMonthlyBudget(total, other, daily) }
                 )
             }
 
@@ -185,8 +184,7 @@ fun BudgetCard(
     monthlyOtherSpent: Double,
     monthlyDailySpent: Double,
     currencyFormat: NumberFormat,
-    onUpdateRatio: (Double, Double) -> Unit,
-    onUpdateMonthlyTotal: (Double) -> Unit
+    onUpdateBudget: (Double, Double, Double) -> Unit
 ) {
     val budgetAmount = budget?.budget ?: 0.0
     val netExpense = todayExpense - todayIncome
@@ -359,8 +357,7 @@ fun BudgetCard(
             currentDaily = monthlyBudget.dailyBudget,
             currentMonthlyTotal = monthlyBudget.monthlyTotalBudget,
             onConfirm = { monthlyTotal, other, daily ->
-                onUpdateMonthlyTotal(monthlyTotal)
-                onUpdateRatio(other, daily)
+                onUpdateBudget(monthlyTotal, other, daily)
                 showRatioDialog = false
             },
             onDismiss = { showRatioDialog = false },
@@ -458,6 +455,27 @@ fun BudgetRatioDialog(
 ) {
     var monthlyTotalValue by remember { mutableStateOf(currentMonthlyTotal) }
     var dailyValue by remember { mutableStateOf(currentDaily) }
+    var monthlyTotalText by remember { mutableStateOf(currentMonthlyTotal.toInt().toString()) }
+    var dailyText by remember { mutableStateOf(currentDaily.toInt().toString()) }
+
+    fun syncMonthlyFromText(text: String) {
+        monthlyTotalText = text
+        val parsed = text.toDoubleOrNull()
+        if (parsed != null && parsed >= 500) {
+            monthlyTotalValue = parsed.coerceAtMost(5000.0)
+            if (dailyValue > monthlyTotalValue) dailyValue = monthlyTotalValue
+            dailyText = dailyValue.toInt().toString()
+        }
+    }
+
+    fun syncDailyFromText(text: String) {
+        dailyText = text
+        val parsed = text.toDoubleOrNull()
+        if (parsed != null && parsed >= 0) {
+            dailyValue = parsed.coerceAtMost(monthlyTotalValue)
+        }
+    }
+
     val otherValue = monthlyTotalValue - dailyValue
 
     AlertDialog(
@@ -469,20 +487,21 @@ fun BudgetRatioDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // 月度总预算
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // 月度总预算: 文本框 + 滑块
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "月度总预算",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = currencyFormat.format(monthlyTotalValue),
-                            style = MaterialTheme.typography.bodyMedium.copy(
+                        Text("月度总预算", style = MaterialTheme.typography.bodyMedium)
+                        OutlinedTextField(
+                            value = monthlyTotalText,
+                            onValueChange = { syncMonthlyFromText(it) },
+                            modifier = Modifier.width(120.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AnimePink
                             )
@@ -490,9 +509,13 @@ fun BudgetRatioDialog(
                     }
                     Slider(
                         value = monthlyTotalValue.toFloat(),
-                        onValueChange = { newTotal ->
-                            monthlyTotalValue = newTotal.toDouble()
-                            if (dailyValue > monthlyTotalValue) dailyValue = monthlyTotalValue
+                        onValueChange = { v ->
+                            monthlyTotalValue = v.toDouble()
+                            monthlyTotalText = v.toInt().toString()
+                            if (dailyValue > monthlyTotalValue) {
+                                dailyValue = monthlyTotalValue
+                                dailyText = dailyValue.toInt().toString()
+                            }
                         },
                         valueRange = 500f..5000f,
                         modifier = Modifier.fillMaxWidth(),
@@ -505,19 +528,20 @@ fun BudgetRatioDialog(
 
                 Divider()
 
-                // 日常支出
+                // 日常支出: 文本框 + 滑块
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "日常支出",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = currencyFormat.format(dailyValue),
-                            style = MaterialTheme.typography.bodyMedium.copy(
+                        Text("日常支出", style = MaterialTheme.typography.bodyMedium)
+                        OutlinedTextField(
+                            value = dailyText,
+                            onValueChange = { syncDailyFromText(it) },
+                            modifier = Modifier.width(120.dp),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AnimePink
                             )
@@ -525,7 +549,10 @@ fun BudgetRatioDialog(
                     }
                     Slider(
                         value = dailyValue.toFloat(),
-                        onValueChange = { dailyValue = it.toDouble() },
+                        onValueChange = { v ->
+                            dailyValue = v.toDouble()
+                            dailyText = v.toInt().toString()
+                        },
                         valueRange = 0f..monthlyTotalValue.toFloat(),
                         modifier = Modifier.fillMaxWidth(),
                         colors = SliderDefaults.colors(
@@ -535,36 +562,23 @@ fun BudgetRatioDialog(
                     )
                 }
 
-                // 其他支出(娱乐)（自动计算）
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "其他支出(娱乐)",
-                            style = MaterialTheme.typography.bodyMedium
+                Divider()
+
+                // 其他支出(自动计算)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("其他支出(娱乐)", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = currencyFormat.format(otherValue),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = AnimePurple
                         )
-                        Text(
-                            text = currencyFormat.format(otherValue),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = AnimePurple
-                            )
-                        )
-                    }
-                    LinearProgressIndicator(
-                        progress = (otherValue / monthlyTotalValue).toFloat().coerceIn(0f, 1f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = AnimePurple,
-                        trackColor = AnimePurple.copy(alpha = 0.2f)
                     )
                 }
 
-                // 总额显示
                 Text(
                     text = "合计: ${currencyFormat.format(monthlyTotalValue)}",
                     style = MaterialTheme.typography.bodyMedium.copy(

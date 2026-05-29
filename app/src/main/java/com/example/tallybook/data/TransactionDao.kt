@@ -36,6 +36,9 @@ interface TransactionDao {
     @Query("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE date BETWEEN :startDate AND :endDate AND type = 'EXPENSE' AND category IN ('FOOD', 'TRANSPORT', 'SHOPPING', 'MEDICAL', 'EDUCATION')")
     fun getMonthlyDailySpent(startDate: LocalDate, endDate: LocalDate): Flow<Double>
 
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE date BETWEEN :startDate AND :endDate AND type = 'EXPENSE' AND category IN (:categories)")
+    suspend fun getTotalExpenseByCategories(startDate: LocalDate, endDate: LocalDate, categories: List<String>): Double
+
     @Query("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE date BETWEEN :startDate AND :endDate AND type = 'INCOME'")
     fun getMonthlyIncome(startDate: LocalDate, endDate: LocalDate): Flow<Double>
 

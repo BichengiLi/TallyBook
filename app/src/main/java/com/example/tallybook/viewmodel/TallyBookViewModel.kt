@@ -154,15 +154,9 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
         return repository.getBudgetsByDateRange(startDate, endDate)
     }
 
-    fun updateMonthlyRatio(otherBudget: Double, dailyBudget: Double) {
+    fun updateMonthlyBudget(monthlyTotalBudget: Double, otherBudget: Double, dailyBudget: Double) {
         viewModelScope.launch {
-            repository.updateMonthlyRatio(otherBudget, dailyBudget)
-        }
-    }
-
-    fun updateMonthlyTotalBudget(newTotal: Double) {
-        viewModelScope.launch {
-            repository.updateMonthlyTotalBudget(newTotal)
+            repository.updateMonthlyBudget(monthlyTotalBudget, otherBudget, dailyBudget)
         }
     }
 }

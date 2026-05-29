@@ -103,36 +103,19 @@ class TallyBookRepository(
         }
     }
 
-    suspend fun updateMonthlyRatio(otherBudget: Double, dailyBudget: Double) {
+    suspend fun updateMonthlyBudget(monthlyTotalBudget: Double, otherBudget: Double, dailyBudget: Double) {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val month = formatMonth(today)
-        val existing = monthlyBudgetDao.getMonthlyBudget(month).firstOrNull()
-        val monthlyTotal = existing?.monthlyTotalBudget ?: 2000.0
         monthlyBudgetDao.insertOrUpdate(
             MonthlyBudget(
                 month = month,
-                monthlyTotalBudget = monthlyTotal,
+                monthlyTotalBudget = monthlyTotalBudget,
                 totalBudget = otherBudget + dailyBudget,
                 otherBudget = otherBudget,
                 dailyBudget = dailyBudget
             )
         )
         calculateDailyBudget(today)
-    }
-
-    suspend fun updateMonthlyTotalBudget(newTotal: Double) {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val month = formatMonth(today)
-        val existing = monthlyBudgetDao.getMonthlyBudget(month).firstOrNull()
-        monthlyBudgetDao.insertOrUpdate(
-            MonthlyBudget(
-                month = month,
-                monthlyTotalBudget = newTotal,
-                totalBudget = existing?.totalBudget ?: 60.0,
-                otherBudget = existing?.otherBudget ?: 20.0,
-                dailyBudget = existing?.dailyBudget ?: 40.0
-            )
-        )
     }
 
     suspend fun getOrCreateBudget(date: LocalDate): DailyBudget {
@@ -161,14 +144,11 @@ class TallyBookRepository(
         val yesterday = date.minus(1, DateTimeUnit.DAY)
 
         // 计算本月1号到昨天的日常净支出 = 日常支出 - 收入（保底0）
+        val dailyCategories = listOf("FOOD", "TRANSPORT", "SHOPPING", "MEDICAL", "EDUCATION")
         val dailyNet = if (yesterday >= firstDayOfMonth) {
-            var dailySpent = 0.0
-            val dailyCategories = listOf("FOOD", "TRANSPORT", "SHOPPING", "MEDICAL", "EDUCATION")
-            for (category in dailyCategories) {
-                dailySpent += transactionDao.getTotalExpenseByDateRangeAndCategory(
-                    firstDayOfMonth, yesterday, category
-                )
-            }
+            val dailySpent = transactionDao.getTotalExpenseByCategories(
+                firstDayOfMonth, yesterday, dailyCategories
+            )
             val income = transactionDao.getMonthlyIncome(firstDayOfMonth, yesterday).first()
             max(dailySpent - income, 0.0)
         } else {
@@ -206,18 +186,9 @@ class TallyBookRepository(
     private suspend fun updateBudgetSpent(date: LocalDate) {
         // 只计算日常类支出（不含娱乐和其他）
         val dailyCategories = listOf("FOOD", "TRANSPORT", "SHOPPING", "MEDICAL", "EDUCATION")
-        var dailyExpense = 0.0
-        for (category in dailyCategories) {
-            dailyExpense += transactionDao.getTotalExpenseByDateRangeAndCategory(
-                date, date, category
-            )
-        }
+        val dailyExpense = transactionDao.getTotalExpenseByCategories(date, date, dailyCategories)
         val income = transactionDao.getTotalIncomeByDate(date).firstOrNull() ?: 0.0
         budgetDao.updateSpentAmount(date, dailyExpense - income)
-
-        // 重算明天的预算
-        val tomorrow = date.plus(1, DateTimeUnit.DAY)
-        calculateDailyBudget(tomorrow)
     }
 
     /**

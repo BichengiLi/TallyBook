@@ -1,5 +1,8 @@
 package com.example.tallybook.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,9 +21,15 @@ sealed class Screen(val route: String) {
 fun TallyBookNavigation() {
     val navController = rememberNavController()
 
+    val fastFade = fadeIn(animationSpec = tween(150)) to fadeOut(animationSpec = tween(150))
+
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Home.route,
+        enterTransition = { fastFade.first },
+        exitTransition = { fastFade.second },
+        popEnterTransition = { fastFade.first },
+        popExitTransition = { fastFade.second }
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
