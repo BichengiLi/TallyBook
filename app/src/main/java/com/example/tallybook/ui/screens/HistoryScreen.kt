@@ -40,24 +40,6 @@ fun HistoryScreen(
     // 筛选状态: null 表示全部, 否则为具体分类
     var selectedFilter by remember { mutableStateOf<String?>(null) }
 
-    val allFilterOptions = listOf(
-        null to "全部",
-        "TYPE_EXPENSE" to "支出",
-        "TYPE_INCOME" to "收入",
-        "FOOD" to "餐饮",
-        "TRANSPORT" to "交通",
-        "SHOPPING" to "购物",
-        "ENTERTAINMENT" to "娱乐",
-        "MEDICAL" to "医疗",
-        "EDUCATION" to "教育",
-        "OTHER_EXPENSE" to "其他支出",
-        "SALARY" to "工资",
-        "BONUS" to "奖金",
-        "INVESTMENT" to "投资",
-        "GIFT" to "礼金",
-        "OTHER_INCOME" to "其他收入"
-    )
-
     // 根据筛选条件过滤
     val filteredTransactions = remember(monthlyTransactions, selectedFilter) {
         when (selectedFilter) {
@@ -109,9 +91,8 @@ fun HistoryScreen(
                 .padding(paddingValues)
                 .background(AnimeBackground)
         ) {
-            // 筛选按钮行
-            FilterChipsRow(
-                options = allFilterOptions,
+            // 筛选下拉框
+            FilterDropdown(
                 selectedFilter = selectedFilter,
                 onFilterSelected = { selectedFilter = it }
             )
@@ -298,48 +279,122 @@ fun DaySummary(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilterChipsRow(
-    options: List<Pair<String?, String>>,
+fun FilterDropdown(
     selectedFilter: String?,
     onFilterSelected: (String?) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val selectedLabel = when (selectedFilter) {
+        null -> "全部"
+        "TYPE_EXPENSE" -> "支出"
+        "TYPE_INCOME" -> "收入"
+        "FOOD" -> "餐饮"
+        "TRANSPORT" -> "交通"
+        "SHOPPING" -> "购物"
+        "ENTERTAINMENT" -> "娱乐"
+        "MEDICAL" -> "医疗"
+        "EDUCATION" -> "教育"
+        "OTHER_EXPENSE" -> "其他支出"
+        "SALARY" -> "工资"
+        "BONUS" -> "奖金"
+        "INVESTMENT" -> "投资"
+        "GIFT" -> "礼金"
+        "OTHER_INCOME" -> "其他收入"
+        else -> "全部"
+    }
+
+    val expenseItems = listOf(
+        "FOOD" to "餐饮",
+        "TRANSPORT" to "交通",
+        "SHOPPING" to "购物",
+        "ENTERTAINMENT" to "娱乐",
+        "MEDICAL" to "医疗",
+        "EDUCATION" to "教育",
+        "OTHER_EXPENSE" to "其他支出"
+    )
+    val incomeItems = listOf(
+        "SALARY" to "工资",
+        "BONUS" to "奖金",
+        "INVESTMENT" to "投资",
+        "GIFT" to "礼金",
+        "OTHER_INCOME" to "其他收入"
+    )
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = AnimeBackground
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.FilterList,
-                contentDescription = "筛选",
-                tint = AnimePink,
-                modifier = Modifier
-                    .size(32.dp)
-                    .padding(4.dp)
-            )
-            options.forEach { (key, label) ->
-                val isSelected = selectedFilter == key
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onFilterSelected(key) },
-                    label = {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AnimePink,
-                        selectedLabelColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+            OutlinedButton(
+                onClick = { expanded = true },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = AnimePink
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, AnimePink.copy(alpha = 0.5f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(selectedLabel)
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("全部", fontWeight = FontWeight.Bold) },
+                    onClick = {
+                        onFilterSelected(null)
+                        expanded = false
+                    }
+                )
+                HorizontalDivider()
+                // 支出
+                DropdownMenuItem(
+                    text = { Text("支出", fontWeight = FontWeight.Bold, color = AnimeRed) },
+                    onClick = {
+                        onFilterSelected("TYPE_EXPENSE")
+                        expanded = false
+                    }
+                )
+                expenseItems.forEach { (key, label) ->
+                    DropdownMenuItem(
+                        text = { Text("    $label") },
+                        onClick = {
+                            onFilterSelected(key)
+                            expanded = false
+                        }
+                    )
+                }
+                HorizontalDivider()
+                // 收入
+                DropdownMenuItem(
+                    text = { Text("收入", fontWeight = FontWeight.Bold, color = AnimeGreen) },
+                    onClick = {
+                        onFilterSelected("TYPE_INCOME")
+                        expanded = false
+                    }
+                )
+                incomeItems.forEach { (key, label) ->
+                    DropdownMenuItem(
+                        text = { Text("    $label") },
+                        onClick = {
+                            onFilterSelected(key)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
