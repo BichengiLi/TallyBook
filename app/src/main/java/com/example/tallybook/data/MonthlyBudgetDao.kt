@@ -13,4 +13,7 @@ interface MonthlyBudgetDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(budget: MonthlyBudget)
+
+    @Query("DELETE FROM monthly_budgets WHERE month = :month")
+    suspend fun deleteByMonth(month: String)
 }

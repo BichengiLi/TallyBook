@@ -23,4 +23,7 @@ interface BudgetDao {
 
     @Query("DELETE FROM daily_budgets WHERE date = :date")
     suspend fun deleteBudgetByDate(date: LocalDate)
+
+    @Query("DELETE FROM daily_budgets WHERE date BETWEEN :startDate AND :endDate")
+    suspend fun deleteByDateRange(startDate: LocalDate, endDate: LocalDate)
 }

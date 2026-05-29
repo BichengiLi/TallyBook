@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
@@ -192,6 +193,40 @@ fun MonthlyBudgetItem(
                                 color = AnimePink,
                                 fontWeight = FontWeight.Bold
                             )
+                        )
+                    }
+                } else {
+                    var showDeleteConfirm by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "删除",
+                            tint = AnimeOnSurface.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    if (showDeleteConfirm) {
+                        AlertDialog(
+                            onDismissRequest = { showDeleteConfirm = false },
+                            title = { Text("确认删除", fontWeight = FontWeight.Bold) },
+                            text = {
+                                Text("确定删除 ${monthlyBudget.month.replace("-", "年")}月 的全部记录？\n此操作不可恢复。")
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        viewModel.deleteMonthData(monthlyBudget.month)
+                                        showDeleteConfirm = false
+                                    }
+                                ) {
+                                    Text("删除", color = AnimeRed)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDeleteConfirm = false }) {
+                                    Text("取消")
+                                }
+                            }
                         )
                     }
                 }

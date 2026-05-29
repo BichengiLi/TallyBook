@@ -230,6 +230,18 @@ class TallyBookRepository(
         }
     }
 
+    suspend fun deleteMonthData(month: String) {
+        val parts = month.split("-")
+        val year = parts[0].toInt()
+        val monthNum = parts[1].toInt()
+        val firstDay = LocalDate(year, monthNum, 1)
+        val lastDay = LocalDate(year, monthNum, daysInMonth(year, monthNum))
+
+        transactionDao.deleteByDateRange(firstDay, lastDay)
+        budgetDao.deleteByDateRange(firstDay, lastDay)
+        monthlyBudgetDao.deleteByMonth(month)
+    }
+
     private fun formatMonth(date: LocalDate): String {
         val m = date.monthNumber.toString().padStart(2, '0')
         return "${date.year}-$m"

@@ -159,4 +159,10 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
             repository.updateMonthlyBudget(monthlyTotalBudget, otherBudget, dailyBudget)
         }
     }
+
+    fun deleteMonthData(month: String) {
+        viewModelScope.launch {
+            repository.deleteMonthData(month)
+        }
+    }
 }
