@@ -125,7 +125,8 @@ fun HomeScreen(
                     monthlyOtherSpent = monthlyOtherSpent,
                     monthlyDailySpent = monthlyDailyNetExpense,
                     currencyFormat = currencyFormat,
-                    onUpdateRatio = { other, daily -> viewModel.updateMonthlyRatio(other, daily) }
+                    onUpdateRatio = { other, daily -> viewModel.updateMonthlyRatio(other, daily) },
+                    onUpdateMonthlyTotal = { newTotal -> viewModel.updateMonthlyTotalBudget(newTotal) }
                 )
             }
 
@@ -184,7 +185,8 @@ fun BudgetCard(
     monthlyOtherSpent: Double,
     monthlyDailySpent: Double,
     currencyFormat: NumberFormat,
-    onUpdateRatio: (Double, Double) -> Unit
+    onUpdateRatio: (Double, Double) -> Unit,
+    onUpdateMonthlyTotal: (Double) -> Unit
 ) {
     val budgetAmount = budget?.budget ?: 0.0
     val netExpense = todayExpense - todayIncome
@@ -357,7 +359,7 @@ fun BudgetCard(
             currentDaily = monthlyBudget.dailyBudget,
             currentMonthlyTotal = monthlyBudget.monthlyTotalBudget,
             onConfirm = { monthlyTotal, other, daily ->
-                viewModel.updateMonthlyTotalBudget(monthlyTotal)
+                onUpdateMonthlyTotal(monthlyTotal)
                 onUpdateRatio(other, daily)
                 showRatioDialog = false
             },
