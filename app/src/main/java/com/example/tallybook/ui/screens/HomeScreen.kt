@@ -454,12 +454,9 @@ fun BudgetRatioDialog(
     onDismiss: () -> Unit,
     currencyFormat: NumberFormat
 ) {
-    var monthlyTotal by remember { mutableStateOf(currentMonthlyTotal) }
-    var isEditingTotal by remember { mutableStateOf(false) }
-    var totalText by remember { mutableStateOf(currentMonthlyTotal.toInt().toString()) }
-
-    val total = monthlyTotal.toFloat()
-    var dailyValue by remember { mutableStateOf(currentDaily.toFloat()) }
+    var monthlyTotalValue by remember { mutableStateOf(currentMonthlyTotal) }
+    var dailyValue by remember { mutableStateOf(currentDaily) }
+    val otherValue = monthlyTotalValue - dailyValue
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -475,61 +472,38 @@ fun BudgetRatioDialog(
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             text = "月度总预算",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        if (isEditingTotal) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(
-                                    value = totalText,
-                                    onValueChange = { totalText = it },
-                                    modifier = Modifier.width(120.dp),
-                                    singleLine = true,
-                                    textStyle = MaterialTheme.typography.bodyMedium
-                                )
-                                IconButton(onClick = {
-                                    val parsed = totalText.toDoubleOrNull()
-                                    if (parsed != null && parsed > 0) {
-                                        monthlyTotal = parsed
-                                    }
-                                    if (dailyValue > monthlyTotal) dailyValue = monthlyTotal
-                                    isEditingTotal = false
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "确认",
-                                        tint = AnimeGreen
-                                    )
-                                }
-                            }
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = currencyFormat.format(monthlyTotal),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = AnimePink
-                                    )
-                                )
-                                IconButton(onClick = { isEditingTotal = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "编辑",
-                                        tint = AnimePink,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = currencyFormat.format(monthlyTotalValue),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = AnimePink
+                            )
+                        )
                     }
+                    Slider(
+                        value = monthlyTotalValue.toFloat(),
+                        onValueChange = { newTotal ->
+                            monthlyTotalValue = newTotal.toDouble()
+                            if (dailyValue > monthlyTotalValue) dailyValue = monthlyTotalValue
+                        },
+                        valueRange = 500f..5000f,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = AnimePink,
+                            activeTrackColor = AnimePink
+                        )
+                    )
                 }
+
                 Divider()
 
-                // 日常支出滑块
+                // 日常支出
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -540,7 +514,7 @@ fun BudgetRatioDialog(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = currencyFormat.format(dailyValue.toDouble()),
+                            text = currencyFormat.format(dailyValue),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AnimePink
@@ -548,10 +522,9 @@ fun BudgetRatioDialog(
                         )
                     }
                     Slider(
-                        value = dailyValue,
-                        onValueChange = { dailyValue = it },
-                        valueRange = 0f..total,
-                        steps = 19,
+                        value = dailyValue.toFloat(),
+                        onValueChange = { dailyValue = it.toDouble() },
+                        valueRange = 0f..monthlyTotalValue.toFloat(),
                         modifier = Modifier.fillMaxWidth(),
                         colors = SliderDefaults.colors(
                             thumbColor = AnimePink,
@@ -560,7 +533,7 @@ fun BudgetRatioDialog(
                     )
                 }
 
-                // 其他支出(娱乐)滑块（自动计算）
+                // 其他支出(娱乐)（自动计算）
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -571,7 +544,7 @@ fun BudgetRatioDialog(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = currencyFormat.format((total - dailyValue).toDouble()),
+                            text = currencyFormat.format(otherValue),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = AnimePurple
@@ -579,7 +552,7 @@ fun BudgetRatioDialog(
                         )
                     }
                     LinearProgressIndicator(
-                        progress = (total - dailyValue) / total,
+                        progress = (otherValue / monthlyTotalValue).toFloat().coerceIn(0f, 1f),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
@@ -591,7 +564,7 @@ fun BudgetRatioDialog(
 
                 // 总额显示
                 Text(
-                    text = "合计: ${currencyFormat.format(total.toDouble())}",
+                    text = "合计: ${currencyFormat.format(monthlyTotalValue)}",
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = AnimeGreen,
                         fontWeight = FontWeight.Bold
@@ -600,9 +573,8 @@ fun BudgetRatioDialog(
             }
         },
         confirmButton = {
-            val otherValue = total - dailyValue
             TextButton(
-                onClick = { onConfirm(monthlyTotal, otherValue.toDouble(), dailyValue.toDouble()) }
+                onClick = { onConfirm(monthlyTotalValue, otherValue, dailyValue) }
             ) {
                 Text("确认")
             }
