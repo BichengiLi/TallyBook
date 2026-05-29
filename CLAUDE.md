@@ -26,6 +26,11 @@ Room v3，含迁移 1→2（创建 monthly_budgets 表）和 2→3（新增 mont
 - 页面过渡：slide + fade 250ms
 - 预算调整：文本框 + 滑块双向同步
 - 本月记录筛选：下拉菜单，分支出/收入两大类 + 子分类
+- 月度记录管理：可删除历史月份（含确认弹窗，当月不可删），清理三表数据
+
+## Operations
+
+- `deleteMonthData(month)` — 删除整月数据（transactions + daily_budgets + monthly_budgets），Repository 层事务性操作
 
 ## 工作流
 
