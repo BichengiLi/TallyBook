@@ -1,4 +1,4 @@
-package com.example.tallybook.ui.screens
+﻿package com.example.tallybook.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -37,29 +37,27 @@ fun HistoryScreen(
     val monthlyTransactions by viewModel.monthlyTransactions.collectAsState()
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.CHINA)
 
-    // 筛选状态: null 表示全部, 否则为具体分类
-    var selectedFilter by remember { mutableStateOf<String?>(null) }
+    // 绛涢€夌姸鎬? null 琛ㄧず鍏ㄩ儴, 鍚﹀垯涓哄叿浣撳垎绫?    var selectedFilter by remember { mutableStateOf<String?>(null) }
 
     val allFilterOptions = listOf(
-        null to "全部",
-        "TYPE_EXPENSE" to "支出",
-        "TYPE_INCOME" to "收入",
-        "FOOD" to "餐饮",
-        "TRANSPORT" to "交通",
-        "SHOPPING" to "购物",
-        "ENTERTAINMENT" to "娱乐",
-        "MEDICAL" to "医疗",
-        "EDUCATION" to "教育",
-        "OTHER_EXPENSE" to "其他支出",
-        "SALARY" to "工资",
-        "BONUS" to "奖金",
-        "INVESTMENT" to "投资",
-        "GIFT" to "礼金",
-        "OTHER_INCOME" to "其他收入"
+        null to "鍏ㄩ儴",
+        "TYPE_EXPENSE" to "鏀嚭",
+        "TYPE_INCOME" to "鏀跺叆",
+        "FOOD" to "椁愰ギ",
+        "TRANSPORT" to "浜ら€?,
+        "SHOPPING" to "璐墿",
+        "ENTERTAINMENT" to "濞变箰",
+        "MEDICAL" to "鍖荤枟",
+        "EDUCATION" to "鏁欒偛",
+        "OTHER_EXPENSE" to "鍏朵粬鏀嚭",
+        "SALARY" to "宸ヨ祫",
+        "BONUS" to "濂栭噾",
+        "INVESTMENT" to "鎶曡祫",
+        "GIFT" to "绀奸噾",
+        "OTHER_INCOME" to "鍏朵粬鏀跺叆"
     )
 
-    // 根据筛选条件过滤
-    val filteredTransactions = remember(monthlyTransactions, selectedFilter) {
+    // 鏍规嵁绛涢€夋潯浠惰繃婊?    val filteredTransactions = remember(monthlyTransactions, selectedFilter) {
         when (selectedFilter) {
             null -> monthlyTransactions
             "TYPE_EXPENSE" -> monthlyTransactions.filter { it.type == TransactionType.EXPENSE }
@@ -81,7 +79,7 @@ fun HistoryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "本月记录",
+                        text = "鏈湀璁板綍",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -92,7 +90,7 @@ fun HistoryScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "返回",
+                            contentDescription = "杩斿洖",
                             tint = Color.White
                         )
                     }
@@ -109,7 +107,7 @@ fun HistoryScreen(
                     .padding(paddingValues)
                     .background(AnimeBackground)
             ) {
-                // 筛选按钮行
+                // 绛涢€夋寜閽
                 FilterChipsRow(
                     options = allFilterOptions,
                     selectedFilter = selectedFilter,
@@ -153,7 +151,8 @@ fun HistoryScreen(
                                 )
                             }
                         }
-                    }
+			}
+            }
         }
     }
 }
@@ -177,13 +176,13 @@ fun EmptyHistoryContent(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "本月还没有记录",
+                text = "鏈湀杩樻病鏈夎褰?,
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = AnimeOnSurface.copy(alpha = 0.5f)
                 )
             )
             Text(
-                text = "开始记账后这里会显示所有记录",
+                text = "寮€濮嬭璐﹀悗杩欓噷浼氭樉绀烘墍鏈夎褰?,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = AnimeOnSurface.copy(alpha = 0.3f)
                 )
@@ -198,10 +197,10 @@ fun DateHeader(date: LocalDate) {
     val yesterday = today.minus(DatePeriod(days = 1))
 
     val dateText = when (date) {
-        today -> "今天"
-        yesterday -> "昨天"
+        today -> "浠婂ぉ"
+        yesterday -> "鏄ㄥぉ"
         else -> {
-            val sdf = SimpleDateFormat("MM月dd日 EEEE", Locale.CHINA)
+            val sdf = SimpleDateFormat("MM鏈坉d鏃?EEEE", Locale.CHINA)
             sdf.format(Date(date.toEpochDays() * 24 * 60 * 60 * 1000L))
         }
     }
@@ -264,7 +263,7 @@ fun DaySummary(
         ) {
             Column {
                 Text(
-                    text = "支出",
+                    text = "鏀嚭",
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = AnimeOnSurface.copy(alpha = 0.6f)
                     )
@@ -280,7 +279,7 @@ fun DaySummary(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "收入",
+                    text = "鏀跺叆",
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = AnimeOnSurface.copy(alpha = 0.6f)
                     )
@@ -315,7 +314,7 @@ fun FilterChipsRow(
         ) {
             Icon(
                 imageVector = Icons.Default.FilterList,
-                contentDescription = "筛选",
+                contentDescription = "绛涢€?,
                 tint = AnimePink,
                 modifier = Modifier
                     .size(32.dp)
