@@ -359,7 +359,7 @@ fun FilterDropdown(
                         expanded = false
                     }
                 )
-                HorizontalDivider()
+                Divider()
                 // 支出
                 DropdownMenuItem(
                     text = { Text("支出", fontWeight = FontWeight.Bold, color = AnimeRed) },
@@ -377,7 +377,7 @@ fun FilterDropdown(
                         }
                     )
                 }
-                HorizontalDivider()
+                Divider()
                 // 收入
                 DropdownMenuItem(
                     text = { Text("收入", fontWeight = FontWeight.Bold, color = AnimeGreen) },
