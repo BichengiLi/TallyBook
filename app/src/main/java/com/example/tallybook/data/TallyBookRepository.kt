@@ -106,17 +106,33 @@ class TallyBookRepository(
     suspend fun updateMonthlyRatio(otherBudget: Double, dailyBudget: Double) {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val month = formatMonth(today)
-        val totalBudget = otherBudget + dailyBudget
+        val existing = monthlyBudgetDao.getMonthlyBudget(month).firstOrNull()
+        val monthlyTotal = existing?.monthlyTotalBudget ?: 2000.0
         monthlyBudgetDao.insertOrUpdate(
             MonthlyBudget(
                 month = month,
-                totalBudget = totalBudget,
+                monthlyTotalBudget = monthlyTotal,
+                totalBudget = otherBudget + dailyBudget,
                 otherBudget = otherBudget,
                 dailyBudget = dailyBudget
             )
         )
-        // 重新计算当天预算
         calculateDailyBudget(today)
+    }
+
+    suspend fun updateMonthlyTotalBudget(newTotal: Double) {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val month = formatMonth(today)
+        val existing = monthlyBudgetDao.getMonthlyBudget(month).firstOrNull()
+        monthlyBudgetDao.insertOrUpdate(
+            MonthlyBudget(
+                month = month,
+                monthlyTotalBudget = newTotal,
+                totalBudget = existing?.totalBudget ?: 60.0,
+                otherBudget = existing?.otherBudget ?: 20.0,
+                dailyBudget = existing?.dailyBudget ?: 40.0
+            )
+        )
     }
 
     suspend fun getOrCreateBudget(date: LocalDate): DailyBudget {
@@ -231,6 +247,7 @@ class TallyBookRepository(
                 monthlyBudgetDao.insertOrUpdate(
                     MonthlyBudget(
                         month = month,
+                        monthlyTotalBudget = monthlyBudget.monthlyTotalBudget,
                         totalBudget = monthlyBudget.totalBudget,
                         otherBudget = newOtherBudget,
                         dailyBudget = newDailyBudget

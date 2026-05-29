@@ -16,9 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.tallybook.data.DailyBudget
 import com.example.tallybook.data.MonthlyBudget
-import com.example.tallybook.data.Transaction
 import com.example.tallybook.data.TransactionType
 import com.example.tallybook.ui.theme.*
 import com.example.tallybook.viewmodel.TallyBookViewModel
@@ -34,7 +32,6 @@ fun StatisticsScreen(
 ) {
     val allTransactions by viewModel.allTransactions.collectAsState()
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
-    val monthlyOtherSpent by viewModel.monthlyOtherSpent.collectAsState()
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.CHINA)
 
     val today = Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
@@ -103,6 +100,7 @@ fun StatisticsScreen(
                 MonthlyOverviewCard(
                     totalExpense = totalExpense,
                     totalIncome = totalIncome,
+                    monthlyBudget = monthlyBudget,
                     currencyFormat = currencyFormat
                 )
             }
@@ -134,27 +132,6 @@ fun StatisticsScreen(
                 }
             }
 
-            // 预算执行情况
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "预算执行",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = AnimeOnBackground
-                    )
-                )
-            }
-
-            item {
-                BudgetExecutionCard(
-                    totalExpense = totalExpense,
-                    monthlyBudget = monthlyBudget,
-                    monthlyOtherSpent = monthlyOtherSpent,
-                    daysInMonth = endOfMonth.dayOfMonth,
-                    currencyFormat = currencyFormat
-                )
-            }
         }
     }
 }
@@ -163,9 +140,12 @@ fun StatisticsScreen(
 fun MonthlyOverviewCard(
     totalExpense: Double,
     totalIncome: Double,
+    monthlyBudget: MonthlyBudget?,
     currencyFormat: NumberFormat
 ) {
-    val balance = totalIncome - totalExpense
+    val monthlyTotal = monthlyBudget?.monthlyTotalBudget ?: 2000.0
+    val netExpense = (totalExpense - totalIncome).coerceAtLeast(0.0)
+    val balance = monthlyTotal - netExpense
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -387,150 +367,6 @@ fun EmptyStatisticsCard() {
                     color = AnimeOnSurface.copy(alpha = 0.5f)
                 )
             )
-        }
-    }
-}
-
-@Composable
-fun BudgetExecutionCard(
-    totalExpense: Double,
-    monthlyBudget: MonthlyBudget?,
-    monthlyOtherSpent: Double,
-    daysInMonth: Int,
-    currencyFormat: NumberFormat
-) {
-    val totalBudget = monthlyBudget?.totalBudget ?: 60.0
-    val otherBudget = monthlyBudget?.otherBudget ?: 20.0
-    val dailyBudget = monthlyBudget?.dailyBudget ?: 40.0
-    val remaining = totalBudget - totalExpense
-    val executionRate = if (totalBudget > 0) (totalExpense / totalBudget * 100) else 0.0
-    val otherRemaining = otherBudget - monthlyOtherSpent
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "月度预算",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = AnimeOnSurface.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = currencyFormat.format(totalBudget),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "已使用",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = AnimeOnSurface.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = String.format("%.1f%%", executionRate),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        color = if (executionRate > 100) AnimeRed else AnimeGreen,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LinearProgressIndicator(
-                progress = (executionRate / 100).toFloat().coerceIn(0f, 1f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = if (executionRate > 100) AnimeRed else AnimeGreen,
-                trackColor = AnimePink.copy(alpha = 0.1f)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "剩余预算",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = AnimeOnSurface.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = currencyFormat.format(remaining),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        color = if (remaining >= 0) AnimeGreen else AnimeRed,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = AnimePink.copy(alpha = 0.1f))
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 其他支出(娱乐)详情
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "其他支出(娱乐)",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = AnimeOnSurface.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = "${currencyFormat.format(monthlyOtherSpent)} / ${currencyFormat.format(otherBudget)}",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (otherRemaining >= 0) AnimeGreen else AnimeRed,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 日常支出详情
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "日常净支出预算",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = AnimeOnSurface.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = currencyFormat.format(dailyBudget),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
         }
     }
 }

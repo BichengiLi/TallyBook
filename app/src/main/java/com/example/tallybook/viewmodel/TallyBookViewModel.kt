@@ -159,4 +159,10 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
             repository.updateMonthlyRatio(otherBudget, dailyBudget)
         }
     }
+
+    fun updateMonthlyTotalBudget(newTotal: Double) {
+        viewModelScope.launch {
+            repository.updateMonthlyTotalBudget(newTotal)
+        }
+    }
 }

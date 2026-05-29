@@ -355,8 +355,9 @@ fun BudgetCard(
         BudgetRatioDialog(
             currentOther = monthlyBudget.otherBudget,
             currentDaily = monthlyBudget.dailyBudget,
-            totalBudget = monthlyBudget.totalBudget,
-            onConfirm = { other, daily ->
+            currentMonthlyTotal = monthlyBudget.monthlyTotalBudget,
+            onConfirm = { monthlyTotal, other, daily ->
+                viewModel.updateMonthlyTotalBudget(monthlyTotal)
                 onUpdateRatio(other, daily)
                 showRatioDialog = false
             },
@@ -397,7 +398,7 @@ fun MonthlyBudgetSummary(
                     )
                 )
                 Text(
-                    text = currencyFormat.format(monthlyBudget.totalBudget),
+                    text = currencyFormat.format(monthlyBudget.monthlyTotalBudget),
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -448,13 +449,16 @@ fun MonthlyBudgetSummary(
 fun BudgetRatioDialog(
     currentOther: Double,
     currentDaily: Double,
-    totalBudget: Double,
-    onConfirm: (Double, Double) -> Unit,
+    currentMonthlyTotal: Double,
+    onConfirm: (Double, Double, Double) -> Unit,
     onDismiss: () -> Unit,
     currencyFormat: NumberFormat
 ) {
-    // 两个滑块联动，总和固定为2000
-    val total = 2000f
+    var monthlyTotal by remember { mutableStateOf(currentMonthlyTotal) }
+    var isEditingTotal by remember { mutableStateOf(false) }
+    var totalText by remember { mutableStateOf(currentMonthlyTotal.toInt().toString()) }
+
+    val total = monthlyTotal.toFloat()
     var dailyValue by remember { mutableStateOf(currentDaily.toFloat()) }
 
     AlertDialog(
@@ -467,6 +471,64 @@ fun BudgetRatioDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // 月度总预算
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "月度总预算",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (isEditingTotal) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = totalText,
+                                    onValueChange = { totalText = it },
+                                    modifier = Modifier.width(120.dp),
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyMedium
+                                )
+                                IconButton(onClick = {
+                                    val parsed = totalText.toDoubleOrNull()
+                                    if (parsed != null && parsed > 0) {
+                                        monthlyTotal = parsed
+                                    }
+                                    if (dailyValue > monthlyTotal) dailyValue = monthlyTotal
+                                    isEditingTotal = false
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "确认",
+                                        tint = AnimeGreen
+                                    )
+                                }
+                            }
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = currencyFormat.format(monthlyTotal),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AnimePink
+                                    )
+                                )
+                                IconButton(onClick = { isEditingTotal = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "编辑",
+                                        tint = AnimePink,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Divider()
+
                 // 日常支出滑块
                 Column {
                     Row(
@@ -540,7 +602,7 @@ fun BudgetRatioDialog(
         confirmButton = {
             val otherValue = total - dailyValue
             TextButton(
-                onClick = { onConfirm(otherValue.toDouble(), dailyValue.toDouble()) }
+                onClick = { onConfirm(monthlyTotal, otherValue.toDouble(), dailyValue.toDouble()) }
             ) {
                 Text("确认")
             }

@@ -124,9 +124,10 @@ fun MonthlyBudgetItem(
         })
     }
 
-    // 获取该月支出数据
+    // 获取该月支出和收入数据
     var otherSpent by remember { mutableStateOf(0.0) }
     var dailySpent by remember { mutableStateOf(0.0) }
+    var totalIncome by remember { mutableStateOf(0.0) }
 
     LaunchedEffect(monthlyBudget.month) {
         viewModel.getTransactionsByDateRange(firstDay, lastDay).collect { transactions ->
@@ -136,11 +137,15 @@ fun MonthlyBudgetItem(
             dailySpent = transactions
                 .filter { it.type == com.example.tallybook.data.TransactionType.EXPENSE && it.category !in listOf("ENTERTAINMENT", "OTHER") }
                 .sumOf { it.amount }
+            totalIncome = transactions
+                .filter { it.type == com.example.tallybook.data.TransactionType.INCOME }
+                .sumOf { it.amount }
         }
     }
 
     val totalSpent = dailySpent + otherSpent
-    val totalSaved = monthlyBudget.totalBudget - totalSpent
+    val netExpense = (totalSpent - totalIncome).coerceAtLeast(0.0)
+    val totalSaved = monthlyBudget.monthlyTotalBudget - netExpense
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -202,7 +207,7 @@ fun MonthlyBudgetItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("月预算", style = MaterialTheme.typography.bodySmall.copy(color = AnimeOnSurface.copy(alpha = 0.6f)))
-                Text(currencyFormat.format(monthlyBudget.totalBudget), style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+                Text(currencyFormat.format(monthlyBudget.monthlyTotalBudget), style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Row(

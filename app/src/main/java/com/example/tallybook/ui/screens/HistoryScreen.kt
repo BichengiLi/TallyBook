@@ -1,13 +1,16 @@
 package com.example.tallybook.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tallybook.data.Transaction
+import com.example.tallybook.data.TransactionType
 import com.example.tallybook.ui.theme.*
 import com.example.tallybook.viewmodel.TallyBookViewModel
 import kotlinx.datetime.*
@@ -33,9 +37,42 @@ fun HistoryScreen(
     val monthlyTransactions by viewModel.monthlyTransactions.collectAsState()
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.CHINA)
 
-    // Group transactions by date (本月记录)
-    val groupedTransactions = remember(monthlyTransactions) {
-        monthlyTransactions.groupBy { it.date }
+    // 筛选状态: null 表示全部, 否则为具体分类
+    var selectedFilter by remember { mutableStateOf<String?>(null) }
+
+    val allFilterOptions = listOf(
+        null to "全部",
+        "TYPE_EXPENSE" to "支出",
+        "TYPE_INCOME" to "收入",
+        "FOOD" to "餐饮",
+        "TRANSPORT" to "交通",
+        "SHOPPING" to "购物",
+        "ENTERTAINMENT" to "娱乐",
+        "MEDICAL" to "医疗",
+        "EDUCATION" to "教育",
+        "OTHER_EXPENSE" to "其他支出",
+        "SALARY" to "工资",
+        "BONUS" to "奖金",
+        "INVESTMENT" to "投资",
+        "GIFT" to "礼金",
+        "OTHER_INCOME" to "其他收入"
+    )
+
+    // 根据筛选条件过滤
+    val filteredTransactions = remember(monthlyTransactions, selectedFilter) {
+        when (selectedFilter) {
+            null -> monthlyTransactions
+            "TYPE_EXPENSE" -> monthlyTransactions.filter { it.type == TransactionType.EXPENSE }
+            "TYPE_INCOME" -> monthlyTransactions.filter { it.type == TransactionType.INCOME }
+            "OTHER_EXPENSE" -> monthlyTransactions.filter { it.type == TransactionType.EXPENSE && it.category == "OTHER" }
+            "OTHER_INCOME" -> monthlyTransactions.filter { it.type == TransactionType.INCOME && it.category == "OTHER" }
+            else -> monthlyTransactions.filter { it.category == selectedFilter }
+        }
+    }
+
+    // Group transactions by date
+    val groupedTransactions = remember(filteredTransactions) {
+        filteredTransactions.groupBy { it.date }
             .toSortedMap(compareByDescending { it })
     }
 
@@ -66,48 +103,66 @@ fun HistoryScreen(
             )
         }
     ) { paddingValues ->
-        if (groupedTransactions.isEmpty()) {
-            EmptyHistoryContent(paddingValues)
-        } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(AnimeBackground),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .background(AnimeBackground)
             ) {
-                groupedTransactions.forEach { (date, transactions) ->
-                    item {
-                        DateHeader(date = date)
-                    }
+                // 筛选按钮行
+                FilterChipsRow(
+                    options = allFilterOptions,
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = { selectedFilter = it }
+                )
 
-                    items(transactions) { transaction ->
-                        TransactionItem(
-                            transaction = transaction,
-                            onDelete = { viewModel.deleteTransaction(transaction) },
-                            currencyFormat = currencyFormat
-                        )
+                if (groupedTransactions.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyHistoryContent(Modifier)
                     }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        groupedTransactions.forEach { (date, transactions) ->
+                            item {
+                                DateHeader(date = date)
+                            }
 
-                    item {
-                        DaySummary(
-                            transactions = transactions,
-                            currencyFormat = currencyFormat
-                        )
+                            items(transactions) { transaction ->
+                                TransactionItem(
+                                    transaction = transaction,
+                                    onDelete = { viewModel.deleteTransaction(transaction) },
+                                    currencyFormat = currencyFormat
+                                )
+                            }
+
+                            item {
+                                DaySummary(
+                                    transactions = transactions,
+                                    currencyFormat = currencyFormat
+                                )
+                            }
+                        }
                     }
-                }
-            }
         }
     }
 }
 
 @Composable
-fun EmptyHistoryContent(paddingValues: PaddingValues) {
+fun EmptyHistoryContent(modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(paddingValues)
             .background(AnimeBackground),
         contentAlignment = Alignment.Center
     ) {
@@ -236,6 +291,52 @@ fun DaySummary(
                         color = AnimeGreen,
                         fontWeight = FontWeight.Bold
                     )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FilterChipsRow(
+    options: List<Pair<String?, String>>,
+    selectedFilter: String?,
+    onFilterSelected: (String?) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = AnimeBackground
+    ) {
+        Row(
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.FilterList,
+                contentDescription = "筛选",
+                tint = AnimePink,
+                modifier = Modifier
+                    .size(32.dp)
+                    .padding(4.dp)
+            )
+            options.forEach { (key, label) ->
+                val isSelected = selectedFilter == key
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onFilterSelected(key) },
+                    label = {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = AnimePink,
+                        selectedLabelColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 )
             }
         }
