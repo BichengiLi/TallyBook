@@ -25,6 +25,7 @@ import com.example.tallybook.data.DailyBudget
 import com.example.tallybook.data.MonthlyBudget
 import com.example.tallybook.data.Transaction
 import com.example.tallybook.data.TransactionType
+import com.example.tallybook.ui.components.ExpandableFAB
 import com.example.tallybook.ui.theme.*
 import com.example.tallybook.viewmodel.TallyBookViewModel
 import kotlinx.datetime.Clock
@@ -51,6 +52,8 @@ fun HomeScreen(
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
     val monthlyOtherSpent by viewModel.monthlyOtherSpent.collectAsState()
     val monthlyDailyNetExpense by viewModel.monthlyDailyNetExpense.collectAsState()
+    val isRewardClaimed by viewModel.isRewardClaimed.collectAsState()
+    val rewardAmount by viewModel.rewardAmount.collectAsState()
 
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale.CHINA)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -74,6 +77,9 @@ fun HomeScreen(
         }
     }
 
+    // 自律奖励金额调整弹窗
+    var showRewardAmountDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,30 +97,20 @@ fun HomeScreen(
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAddTransaction,
-                containerColor = AnimePink,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "添加记录",
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(AnimeBackground),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AnimeBackground),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // 预算卡片
             item {
                 BudgetCard(
@@ -172,7 +168,113 @@ fun HomeScreen(
                 }
             }
         }
+
+        // 可展开浮钮（自律奖励）
+        ExpandableFAB(
+            isRewardClaimed = isRewardClaimed,
+            onRewardClick = { viewModel.claimReward() },
+            onAddClick = onNavigateToAddTransaction,
+            onRewardLongPress = { showRewardAmountDialog = true },
+            modifier = Modifier.fillMaxSize()
+        )
     }
+
+    // 自律奖励金额调整弹窗
+    if (showRewardAmountDialog) {
+        RewardAmountDialog(
+            currentAmount = rewardAmount,
+            onConfirm = { amount ->
+                viewModel.setRewardAmount(amount)
+                showRewardAmountDialog = false
+            },
+            onDismiss = { showRewardAmountDialog = false },
+            currencyFormat = currencyFormat
+        )
+    }
+    }
+}
+
+@Composable
+fun RewardAmountDialog(
+    currentAmount: Double,
+    onConfirm: (Double) -> Unit,
+    onDismiss: () -> Unit,
+    currencyFormat: NumberFormat
+) {
+    var amount by remember { mutableStateOf(currentAmount) }
+    var textValue by remember { mutableStateOf(currentAmount.toInt().toString()) }
+
+    fun syncFromText(text: String) {
+        textValue = text
+        val parsed = text.toDoubleOrNull()
+        if (parsed != null && parsed >= 1.0) {
+            amount = parsed.coerceAtMost(100.0)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "自律奖励金额",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("每次奖励金额", style = MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(
+                        value = textValue,
+                        onValueChange = { syncFromText(it) },
+                        modifier = Modifier.width(100.dp),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = AnimePink
+                        )
+                    )
+                }
+                Slider(
+                    value = amount.toFloat(),
+                    onValueChange = { v ->
+                        amount = v.toDouble()
+                        textValue = v.toInt().toString()
+                    },
+                    valueRange = 1f..100f,
+                    steps = 0,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = AnimePink,
+                        activeTrackColor = AnimePink
+                    )
+                )
+                Text(
+                    text = "范围: ¥1 ~ ¥100",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = AnimeOnSurface.copy(alpha = 0.5f)
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(amount) },
+                colors = ButtonDefaults.textButtonColors(contentColor = AnimePink)
+            ) {
+                Text("确定", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable

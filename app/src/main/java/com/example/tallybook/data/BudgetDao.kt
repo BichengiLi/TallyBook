@@ -21,6 +21,9 @@ interface BudgetDao {
     @Query("UPDATE daily_budgets SET spent = :spent WHERE date = :date")
     suspend fun updateSpentAmount(date: LocalDate, spent: Double)
 
+    @Query("UPDATE daily_budgets SET rewardClaimed = :claimed WHERE date = :date")
+    suspend fun setRewardClaimed(date: LocalDate, claimed: Boolean)
+
     @Query("DELETE FROM daily_budgets WHERE date = :date")
     suspend fun deleteBudgetByDate(date: LocalDate)
 

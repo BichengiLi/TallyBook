@@ -56,6 +56,10 @@ class TallyBookRepository(
     // Budget operations
     fun getBudgetByDate(date: LocalDate): Flow<DailyBudget?> = budgetDao.getBudgetByDate(date)
 
+    suspend fun setRewardClaimed(date: LocalDate, claimed: Boolean) {
+        budgetDao.setRewardClaimed(date, claimed)
+    }
+
     fun getBudgetsByDateRange(startDate: LocalDate, endDate: LocalDate): Flow<List<DailyBudget>> =
         budgetDao.getBudgetsByDateRange(startDate, endDate)
 
@@ -171,8 +175,8 @@ class TallyBookRepository(
         // 查是否已有当天预算记录
         val existing = budgetDao.getBudgetByDate(date).firstOrNull()
         if (existing != null) {
-            // 更新 budget 但保留 spent
-            budgetDao.insertBudget(newBudget.copy(spent = existing.spent))
+            // 更新 budget 但保留 spent 和 rewardClaimed
+            budgetDao.insertBudget(newBudget.copy(spent = existing.spent, rewardClaimed = existing.rewardClaimed))
         } else {
             budgetDao.insertBudget(newBudget)
         }

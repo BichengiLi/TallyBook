@@ -9,7 +9,8 @@ data class DailyBudget(
     @PrimaryKey
     val date: LocalDate,
     val budget: Double,
-    val spent: Double = 0.0
+    val spent: Double = 0.0,
+    val rewardClaimed: Boolean = false
 ) {
     val remaining: Double get() = budget - spent
     val isOverBudget: Boolean get() = spent > budget

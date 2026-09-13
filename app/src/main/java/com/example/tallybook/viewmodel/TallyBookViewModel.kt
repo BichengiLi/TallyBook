@@ -82,6 +82,18 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
     private val _showUndoSnackbar = MutableStateFlow(false)
     val showUndoSnackbar: StateFlow<Boolean> = _showUndoSnackbar.asStateFlow()
 
+    private var _lastTransactionWasReward = false
+
+    // 自律奖励
+    private val rewardPreferences = RewardPreferences(application)
+
+    private val _rewardAmount = MutableStateFlow(rewardPreferences.getRewardAmount())
+    val rewardAmount: StateFlow<Double> = _rewardAmount.asStateFlow()
+
+    val isRewardClaimed: StateFlow<Boolean> = todayBudget.map { budget ->
+        budget?.rewardClaimed == true
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     init {
         viewModelScope.launch {
             repository.initializeBudgetForDate(_currentDate.value)
@@ -99,6 +111,7 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
             )
             repository.insertTransaction(transaction)
             _lastAddedTransaction.value = transaction
+            _lastTransactionWasReward = false
             _showUndoSnackbar.value = true
         }
     }
@@ -114,8 +127,35 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
             )
             repository.insertTransaction(transaction)
             _lastAddedTransaction.value = transaction
+            _lastTransactionWasReward = false
             _showUndoSnackbar.value = true
         }
+    }
+
+    fun claimReward() {
+        viewModelScope.launch {
+            val today = _currentDate.value
+            val amount = _rewardAmount.value
+            // 确保当日预算行存在，否则 setRewardClaimed 的 UPDATE 找不到行
+            repository.initializeBudgetForDate(today)
+            val transaction = Transaction(
+                amount = amount,
+                type = TransactionType.INCOME,
+                category = "OTHER",
+                note = "奖励",
+                date = today
+            )
+            repository.insertTransaction(transaction)
+            repository.setRewardClaimed(today, true)
+            _lastAddedTransaction.value = transaction
+            _lastTransactionWasReward = true
+            _showUndoSnackbar.value = true
+        }
+    }
+
+    fun setRewardAmount(amount: Double) {
+        _rewardAmount.value = amount
+        rewardPreferences.setRewardAmount(amount)
     }
 
     fun deleteTransaction(transaction: Transaction) {
@@ -128,7 +168,9 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _lastAddedTransaction.value?.let { transaction ->
                 repository.deleteTransaction(transaction)
+                // 撤回不恢复 rewardClaimed（保持自律奖励资格不恢复）
                 _lastAddedTransaction.value = null
+                _lastTransactionWasReward = false
                 _showUndoSnackbar.value = false
             }
         }
@@ -137,6 +179,7 @@ class TallyBookViewModel(application: Application) : AndroidViewModel(applicatio
     fun dismissUndoSnackbar() {
         _showUndoSnackbar.value = false
         _lastAddedTransaction.value = null
+        _lastTransactionWasReward = false
     }
 
     fun setCurrentDate(date: LocalDate) {
