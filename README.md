@@ -55,7 +55,7 @@ app/src/main/java/com/example/tallybook/
 │   ├── TransactionDao.kt    # 交易记录DAO
 │   ├── BudgetDao.kt         # 每日预算DAO
 │   ├── MonthlyBudgetDao.kt  # 月度预算DAO
-│   ├── TallyBookDatabase.kt # Room数据库（v3，含迁移脚本）
+│   ├── TallyBookDatabase.kt # Room数据库（v4，含迁移脚本）
 │   ├── Converters.kt        # 类型转换器
 │   └── TallyBookRepository.kt # 数据仓库（核心预算算法）
 ├── viewmodel/               # 视图模型
@@ -103,6 +103,14 @@ app/src/main/java/com/example/tallybook/
 2. 等待Gradle同步完成
 3. 连接Android设备或启动模拟器
 4. 点击运行按钮
+
+## 发布与启动故障排查
+
+- 每次发布 APK 必须递增 `app/build.gradle.kts` 中的 `versionCode`；它与 Room 数据库版本是两个独立的版本号。保持应用 ID 和签名一致，才能覆盖更新并保留账目。
+- Room 当前为 v4，支持 1→2→3→4 升级。历史提交 `9284a82` 曾在数据库版本仍为 2 时新增 `monthlyTotalBudget`，所以 2→3 迁移需要兼容两种 v2 表结构，保留已有的月度总预算。
+- 启动报 `A migration from 4 to 3 was required but not found` 时，表示旧 APK 正在打开较新的数据库。应安装支持 v4 的新 APK；不要用清空数据或破坏性迁移处理账目。
+- 迁移及冷启动回归测试：`gradlew.bat :app:testDebugUnitTest`。测试使用 Robolectric，不需要连接手机或模拟器；首次运行会下载 Android 测试运行时。
+- 具体日志采集与判断见 [启动闪退排查](docs/startup-crash.md)。
 
 ## 系统要求
 

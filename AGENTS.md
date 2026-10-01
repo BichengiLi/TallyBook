@@ -20,6 +20,10 @@ MVVM：Room (TransactionDao / BudgetDao / MonthlyBudgetDao) → TallyBookReposit
 
 Room v4，含迁移 1→2（创建 monthly_budgets 表）、2→3（新增 monthlyTotalBudget 列）和 3→4（daily_budgets 新增 rewardClaimed 列）。
 
+历史 v2 有两种结构：提交 `9284a82` 已新增 monthlyTotalBudget，但没有递增数据库版本。2→3 迁移必须先检测列是否存在，保留已有值。数据库版本不得为适配旧 APK 而降低；不得通过破坏性迁移清空账目。
+
+APK 发布必须递增 `app/build.gradle.kts` 的 versionCode，独立于 Room 版本。数据库迁移及冷启动测试在 `app/src/test/`，运行 `gradlew.bat :app:testDebugUnitTest`（Robolectric，无需设备）。
+
 ## UI
 
 - 固定白天模式

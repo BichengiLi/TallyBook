@@ -38,6 +38,13 @@ abstract class TallyBookDatabase : RoomDatabase() {
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // A historical v2 build already included this column (commit 9284a82).
+                db.query("PRAGMA table_info(`monthly_budgets`)").use { cursor ->
+                    val nameIndex = cursor.getColumnIndexOrThrow("name")
+                    while (cursor.moveToNext()) {
+                        if (cursor.getString(nameIndex) == "monthlyTotalBudget") return
+                    }
+                }
                 db.execSQL(
                     "ALTER TABLE `monthly_budgets` ADD COLUMN `monthlyTotalBudget` REAL NOT NULL DEFAULT 2000.0"
                 )
